@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, Pencil, Trash2, X, Check, BookOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, X, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 type LibraryExercise = { id: string; name: string; sets: number; detail: string; video_url: string | null };
@@ -24,6 +24,7 @@ export default function LibraryPage() {
   const [form, setForm] = useState<Form>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -145,20 +146,39 @@ export default function LibraryPage() {
           ) : (
           <div className="flex flex-col gap-3">
             {exercises.filter((ex) => ex.name.toLowerCase().includes(search.toLowerCase())).map((ex) => (
-            <div key={ex.id} className="bg-surface-container-lowest rounded-2xl px-4 py-3.5 shadow-sm flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="font-inter font-semibold text-sm text-on-background">{ex.name}</p>
-                <p className="font-inter text-xs text-on-surface-variant mt-0.5">
-                  {ex.sets} sets · {ex.detail}
-                  {ex.video_url && <span className="ml-2 text-primary">· video</span>}
-                </p>
+            <div key={ex.id} className="bg-surface-container-lowest rounded-2xl shadow-sm overflow-hidden">
+              <div
+                className={`px-4 py-3.5 flex items-center gap-3 ${ex.video_url ? "cursor-pointer hover:bg-surface-container-low transition-colors" : ""}`}
+                onClick={() => ex.video_url && setExpandedId(expandedId === ex.id ? null : ex.id)}>
+                <div className="flex-1 min-w-0">
+                  <p className="font-inter font-semibold text-sm text-on-background">{ex.name}</p>
+                  <p className="font-inter text-xs text-on-surface-variant mt-0.5 flex items-center gap-1">
+                    {ex.sets} sets · {ex.detail}
+                    {ex.video_url && (
+                      <>
+                        <span className="ml-1 text-primary">· video</span>
+                        {expandedId === ex.id ? <ChevronUp size={12} className="text-primary" /> : <ChevronDown size={12} className="text-primary" />}
+                      </>
+                    )}
+                  </p>
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); openEdit(ex); }} className="p-1.5 rounded-lg hover:bg-surface-container transition-colors">
+                  <Pencil size={16} className="text-on-surface-variant" />
+                </button>
+                <button onClick={(e) => { e.stopPropagation(); handleDelete(ex); }} className="p-1.5 rounded-lg hover:bg-surface-container transition-colors">
+                  <Trash2 size={16} className="text-error" />
+                </button>
               </div>
-              <button onClick={() => openEdit(ex)} className="p-1.5 rounded-lg hover:bg-surface-container transition-colors">
-                <Pencil size={16} className="text-on-surface-variant" />
-              </button>
-              <button onClick={() => handleDelete(ex)} className="p-1.5 rounded-lg hover:bg-surface-container transition-colors">
-                <Trash2 size={16} className="text-error" />
-              </button>
+              {expandedId === ex.id && ex.video_url && getYouTubeId(ex.video_url) && (
+                <div className="aspect-video border-t border-surface-container">
+                  <iframe
+                    className="w-full h-full"
+                    src={`https://www.youtube.com/embed/${getYouTubeId(ex.video_url)}`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              )}
             </div>
           ))}
           </div>
