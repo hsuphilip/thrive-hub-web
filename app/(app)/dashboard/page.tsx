@@ -61,7 +61,7 @@ export default function Dashboard() {
       clients.forEach((c) => { daySetMap[c.id] = new Set(); lastActiveMap[c.id] = null; });
       (weekFeedback ?? []).forEach((f: any) => {
         daySetMap[f.client_id]?.add(new Date(f.created_at).toDateString());
-        if (!lastActiveMap[f.client_id] || f.created_at > lastActiveMap[f.client_id]) lastActiveMap[f.client_id] = f.created_at;
+        if (!lastActiveMap[f.client_id] || f.created_at > (lastActiveMap[f.client_id] ?? "")) lastActiveMap[f.client_id] = f.created_at;
       });
 
       setPtClients(clients.map((c) => ({
