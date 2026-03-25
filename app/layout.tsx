@@ -29,7 +29,7 @@ export default function RootLayout({
     <html lang="en" className={`${inter.variable} ${manrope.variable} h-full`}>
       <head>
         <link rel="icon" href="/thrive-icon.png" type="image/png" />
-        <link rel="apple-touch-icon" href="/thrive-icon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="h-full">{children}</body>
     </html>
