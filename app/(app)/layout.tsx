@@ -100,6 +100,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+          <button
+            onClick={handleSignOut}
+            className="flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[10px] font-inter font-medium text-outline transition-colors">
+            <LogOut size={20} />
+            Sign out
+          </button>
         </nav>
       </div>
     </div>
