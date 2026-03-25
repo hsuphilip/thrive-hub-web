@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Plus, X, Bookmark, BookmarkCheck, BookOpen, Trash2, Check } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -13,7 +13,7 @@ function getYouTubeId(url: string) {
 }
 type LibraryExercise = { id: string; name: string; sets: number; detail: string; video_url: string | null };
 
-export default function NewProgram() {
+function NewProgramContent() {
   const router = useRouter();
   const params = useSearchParams();
   const clientId = params.get("clientId") ?? "";
@@ -306,5 +306,13 @@ export default function NewProgram() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NewProgram() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center h-full"><div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+      <NewProgramContent />
+    </Suspense>
   );
 }
