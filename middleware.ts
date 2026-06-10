@@ -24,13 +24,18 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute = pathname === "/login" || pathname === "/signup";
+  // Pages reachable without being logged in.
+  const publicRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
+  const isPublicRoute = publicRoutes.includes(pathname);
+  // Logged-in users shouldn't see login/signup, but should be allowed to stay
+  // on /reset-password (they arrive there with a temporary recovery session).
+  const redirectIfLoggedIn = pathname === "/login" || pathname === "/signup";
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isPublicRoute) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (user && isAuthRoute) {
+  if (user && redirectIfLoggedIn) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

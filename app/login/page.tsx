@@ -64,6 +64,11 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               autoComplete="current-password"
             />
+            <div className="flex justify-end mt-1.5">
+              <Link href="/forgot-password" className="font-inter text-xs text-on-surface-variant hover:text-primary hover:underline">
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           {error && <p className="text-sm text-error font-inter text-center">{error}</p>}
