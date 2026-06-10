@@ -2,8 +2,9 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, Plus, X, Bookmark, BookmarkCheck, BookOpen, Trash2, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, Bookmark, BookmarkCheck, BookOpen, Trash2, Check, LayoutTemplate } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useToast, ToastContainer } from "@/components/toast";
 
 type Exercise = { name: string; sets: string; detail: string; video_url: string };
 
@@ -12,6 +13,7 @@ function getYouTubeId(url: string) {
   return m ? m[1] : null;
 }
 type LibraryExercise = { id: string; name: string; sets: number; detail: string; video_url: string | null };
+type TemplateItem = { id: string; title: string; estimated_minutes: number; sessions_per_week: number; notes: string | null };
 
 function NewProgramContent() {
   const router = useRouter();
@@ -19,6 +21,7 @@ function NewProgramContent() {
   const clientId = params.get("clientId") ?? "";
   const clientName = params.get("clientName") ?? "";
   const ptId = params.get("ptId") ?? "";
+  const isTemplate = params.get("template") === "true";
 
   const [title, setTitle] = useState("");
   const [minutes, setMinutes] = useState("30");
@@ -35,15 +38,39 @@ function NewProgramContent() {
   const [libraryEditMode, setLibraryEditMode] = useState(false);
   const [librarySearch, setLibrarySearch] = useState("");
 
+  const [templates, setTemplates] = useState<TemplateItem[]>([]);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [templateSearch, setTemplateSearch] = useState("");
+  const { toasts, showToast } = useToast();
+
   const fetchLibrary = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase.from("exercise_library").select("id, name, sets, detail, video_url").eq("pt_id", user.id).order("name");
-    setLibraryExercises(data ?? []);
-    setSavedToLibrary(new Set((data ?? []).map((e: any) => e.name)));
+    const [{ data: lib }, { data: tmpl }] = await Promise.all([
+      supabase.from("exercise_library").select("id, name, sets, detail, video_url").eq("pt_id", user.id).order("name"),
+      supabase.from("programs").select("id, title, estimated_minutes, sessions_per_week, notes").eq("pt_id", user.id).eq("is_template", true).order("title"),
+    ]);
+    setLibraryExercises(lib ?? []);
+    setSavedToLibrary(new Set((lib ?? []).map((e: any) => e.name)));
+    setTemplates(tmpl ?? []);
   };
 
   useEffect(() => { fetchLibrary(); }, []);
+
+  const loadFromTemplate = async (template: TemplateItem) => {
+    const { data: exList } = await supabase.from("exercises")
+      .select("name, sets, detail, sort_order, video_url")
+      .eq("program_id", template.id)
+      .order("sort_order");
+    setTitle(template.title);
+    setMinutes(String(template.estimated_minutes));
+    setNotes(template.notes ?? "");
+    setSpw(template.sessions_per_week ?? 3);
+    setExercises((exList ?? []).map((e) => ({ name: e.name, sets: String(e.sets), detail: e.detail, video_url: e.video_url ?? "" })));
+    setShowTemplates(false);
+    setTemplateSearch("");
+    showToast("Template loaded");
+  };
 
   const saveToLibrary = async (ex: Exercise) => {
     if (!ex.name.trim()) return;
@@ -78,12 +105,20 @@ function NewProgramContent() {
     if (!valid.length) { setError("Add at least one exercise with a name and detail."); return; }
     setSaving(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    const resolvedPtId = isTemplate ? (user?.id ?? "") : ptId;
+
     const { data: program, error: pErr } = await supabase.from("programs").insert({
-      pt_id: ptId, client_id: clientId, title: title.trim(),
-      estimated_minutes: parseInt(minutes) || 30, notes: notes.trim() || null, sessions_per_week: spw,
+      pt_id: resolvedPtId,
+      client_id: isTemplate ? null : clientId,
+      title: title.trim(),
+      estimated_minutes: parseInt(minutes) || 30,
+      notes: notes.trim() || null,
+      sessions_per_week: spw,
+      is_template: isTemplate,
     }).select().single();
 
-    if (pErr || !program) { setError(pErr?.message ?? "Could not create program."); setSaving(false); return; }
+    if (pErr || !program) { setError(pErr?.message ?? "Could not save."); setSaving(false); return; }
 
     await supabase.from("exercises").insert(valid.map((ex, i) => ({
       program_id: program.id, name: ex.name.trim(), sets: parseInt(ex.sets) || 3,
@@ -91,19 +126,29 @@ function NewProgramContent() {
     })));
 
     setSaving(false);
-    alert(`"${title}" has been assigned to ${clientName}.`);
-    router.back();
+    if (isTemplate) {
+      showToast("Template saved");
+      setTimeout(() => router.push("/library"), 1000);
+    } else {
+      showToast(`Program assigned to ${clientName}`);
+      setTimeout(() => router.back(), 1000);
+    }
   };
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-6">
+      <ToastContainer toasts={toasts} />
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()} className="p-1 rounded-full hover:bg-surface-container transition-colors">
           <ArrowLeft size={22} className="text-on-surface-variant" />
         </button>
         <div>
-          <p className="font-inter text-xs text-on-surface-variant">For {clientName}</p>
-          <h1 className="font-manrope font-bold text-xl text-on-background">New Program</h1>
+          <p className="font-inter text-xs text-on-surface-variant">
+            {isTemplate ? "Reusable Template" : `For ${clientName}`}
+          </p>
+          <h1 className="font-manrope font-bold text-xl text-on-background">
+            {isTemplate ? "New Template" : "New Program"}
+          </h1>
         </div>
       </div>
 
@@ -215,16 +260,59 @@ function NewProgramContent() {
         <button type="button" onClick={() => { fetchLibrary(); setShowLibrary(true); }}
           className="border border-primary-container rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-primary-container/20 transition-colors">
           <BookOpen size={18} className="text-primary" />
-          <span className="font-inter font-medium text-sm text-primary">Browse library</span>
+          <span className="font-inter font-medium text-sm text-primary">Browse exercise library</span>
         </button>
+
+        {!isTemplate && templates.length > 0 && (
+          <button type="button" onClick={() => setShowTemplates(true)}
+            className="border border-primary-container rounded-2xl py-3 flex items-center justify-center gap-2 hover:bg-primary-container/20 transition-colors">
+            <LayoutTemplate size={18} className="text-primary" />
+            <span className="font-inter font-medium text-sm text-primary">Start from a template</span>
+          </button>
+        )}
 
         {error && <p className="text-sm text-error font-inter text-center">{error}</p>}
 
         <button type="submit" disabled={saving}
           className="bg-primary text-on-primary font-manrope font-bold text-base rounded-full py-4 disabled:opacity-60 hover:opacity-90 transition-opacity mb-4">
-          {saving ? "Saving..." : "Save & Assign Program"}
+          {saving ? "Saving..." : isTemplate ? "Save Template" : "Save & Assign Program"}
         </button>
       </form>
+
+      {/* Templates modal */}
+      {showTemplates && (
+        <div className="fixed inset-0 bg-black/40 flex items-end sm:items-center justify-center z-50 p-4">
+          <div className="bg-background rounded-3xl w-full max-w-md flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between px-5 pt-5 pb-3 shrink-0">
+              <h2 className="font-manrope font-bold text-xl text-on-background">Start from Template</h2>
+              <button onClick={() => { setShowTemplates(false); setTemplateSearch(""); }}
+                className="p-1 rounded-full hover:bg-surface-container transition-colors">
+                <X size={22} className="text-on-surface-variant" />
+              </button>
+            </div>
+            <div className="px-5 pb-3 shrink-0">
+              <input
+                className="w-full bg-surface-container rounded-xl px-3 py-2.5 font-inter text-sm text-on-background outline-none focus:ring-2 focus:ring-primary/30"
+                placeholder="Search templates..."
+                value={templateSearch}
+                onChange={(e) => setTemplateSearch(e.target.value)}
+              />
+            </div>
+            <div className="overflow-y-auto flex-1 px-5 pb-5 flex flex-col gap-2">
+              {templates.filter((t) => t.title.toLowerCase().includes(templateSearch.toLowerCase())).map((t) => (
+                <button key={t.id} onClick={() => loadFromTemplate(t)}
+                  className="flex items-center px-4 py-3 rounded-2xl bg-surface-container-lowest shadow-sm w-full text-left hover:bg-primary-container/30 transition-colors">
+                  <div className="flex-1">
+                    <p className="font-inter font-semibold text-sm text-on-background">{t.title}</p>
+                    <p className="font-inter text-xs text-on-surface-variant">{t.estimated_minutes} min · {t.sessions_per_week ?? 3}x/week</p>
+                  </div>
+                  <LayoutTemplate size={16} className="text-primary shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Library modal */}
       {showLibrary && (

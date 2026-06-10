@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useToast, ToastContainer } from "@/components/toast";
 import { ArrowLeft, Pencil, X, Plus, Repeat2, Timer, PlayCircle, Bookmark, BookmarkCheck, BookOpen, Trash2, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
@@ -37,6 +38,7 @@ export default function ProgramDetailPage() {
   const [libraryEditMode, setLibraryEditMode] = useState(false);
   const [librarySearch, setLibrarySearch] = useState("");
   const [error, setError] = useState("");
+  const { toasts, showToast } = useToast();
 
   const loadProgram = async () => {
     const [{ data: prog }, { data: exList }] = await Promise.all([
@@ -119,6 +121,7 @@ export default function ProgramDetailPage() {
     setSaving(false);
     await loadProgram();
     setEditing(false);
+    showToast("Program saved");
   };
 
   if (loading) return (
@@ -334,6 +337,7 @@ export default function ProgramDetailPage() {
   // View mode
   return (
     <div className="max-w-2xl mx-auto px-5 py-6">
+      <ToastContainer toasts={toasts} />
       <div className="flex items-center gap-3 mb-6">
         <button onClick={() => router.back()} className="p-1 rounded-full hover:bg-surface-container transition-colors">
           <ArrowLeft size={22} className="text-on-surface-variant" />
