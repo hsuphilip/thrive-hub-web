@@ -6,12 +6,17 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
+// Bump this whenever the Privacy Notice (app/privacy) changes materially.
+// Matches the notice's "Last updated" date.
+const PRIVACY_VERSION = "2026-06-11";
+
 export default function Signup() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<"client" | "pt">("client");
+  const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [confirmSent, setConfirmSent] = useState(false);
@@ -21,12 +26,18 @@ export default function Signup() {
     setError("");
     if (!fullName || !email || !password) { setError("Please fill in all fields."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
+    if (!consent) { setError("Please review and accept the Privacy Notice to continue."); return; }
     setLoading(true);
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: fullName, role },
+        data: {
+          full_name: fullName,
+          role,
+          privacy_consented_at: new Date().toISOString(),
+          privacy_version: PRIVACY_VERSION,
+        },
         emailRedirectTo: `${window.location.origin}/login`,
       },
     });
@@ -131,6 +142,23 @@ export default function Signup() {
               autoComplete="new-password"
             />
           </div>
+
+          <label className="flex items-start gap-3 cursor-pointer mt-1">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => setConsent(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-primary shrink-0"
+            />
+            <span className="font-inter text-xs text-on-surface-variant leading-relaxed">
+              I understand Thrive Hub is used for exercise tracking and prescription only, and I agree to
+              the{" "}
+              <Link href="/privacy" target="_blank" className="text-primary font-semibold hover:underline">
+                Privacy Notice
+              </Link>
+              .
+            </span>
+          </label>
 
           {error && <p className="text-sm text-error font-inter text-center">{error}</p>}
 
