@@ -25,7 +25,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   // Pages reachable without being logged in.
-  const publicRoutes = ["/login", "/signup", "/forgot-password", "/reset-password"];
+  const publicRoutes = ["/login", "/signup", "/forgot-password", "/reset-password", "/privacy"];
   const isPublicRoute = publicRoutes.includes(pathname);
   // Logged-in users shouldn't see login/signup, but should be allowed to stay
   // on /reset-password (they arrive there with a temporary recovery session).
