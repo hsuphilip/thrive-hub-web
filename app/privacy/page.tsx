@@ -87,8 +87,8 @@ export default function Privacy() {
             <h2 className="font-manrope font-bold text-lg text-on-background mb-2">Contact us</h2>
             <p>
               Questions about this notice or your information? Email us at{" "}
-              <a href="mailto:philiphsu.pt@gmail.com" className="text-primary font-semibold hover:underline">
-                philiphsu.pt@gmail.com
+              <a href="mailto:phil@thriveinmotionpt.com" className="text-primary font-semibold hover:underline">
+                phil@thriveinmotionpt.com
               </a>.
             </p>
           </section>
