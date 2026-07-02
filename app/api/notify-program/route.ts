@@ -37,12 +37,12 @@ export async function POST(request: Request) {
   if (!serviceKey || !resendKey) {
     return NextResponse.json({ error: "Email not configured" }, { status: 503 });
   }
-  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
-    auth: { persistSession: false },
-  });
 
   // Only the PT who owns the program may trigger its notification.
-  const { data: program } = await admin
+  // Queried with the caller's own session so RLS does the enforcement.
+  // (On this project the service-role key has no data-API table grants —
+  // it is used ONLY for the auth admin email lookup below.)
+  const { data: program } = await supabase
     .from("programs")
     .select("pt_id, client_id")
     .eq("id", programId)
@@ -54,9 +54,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Program has no patient" }, { status: 400 });
   }
 
+  const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+    auth: { persistSession: false },
+  });
   const [{ data: patientUser }, { data: names }] = await Promise.all([
     admin.auth.admin.getUserById(program.client_id),
-    admin.from("profiles").select("id, full_name").in("id", [user.id, program.client_id]),
+    supabase.from("profiles").select("id, full_name").in("id", [user.id, program.client_id]),
   ]);
   const email = patientUser?.user?.email;
   if (!email) return NextResponse.json({ error: "Patient email not found" }, { status: 404 });
