@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Dumbbell, Repeat2, Timer, ChevronDown, ChevronUp, Check, CalendarRange, FileText } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useToast, ToastContainer } from "@/components/toast";
 
 type Exercise = {
   id: string; name: string; sets: number; detail: string; sort_order: number;
@@ -30,6 +31,7 @@ export default function Workouts() {
   const [editNotes, setEditNotes] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const { toasts, showToast } = useToast();
 
   useEffect(() => {
     const load = async () => {
@@ -66,17 +68,25 @@ export default function Workouts() {
 
   const markDone = async (i: number) => {
     const ex = exercises[i];
-    const { data: inserted } = await supabase.from("exercise_feedback")
+    const { data: inserted, error } = await supabase.from("exercise_feedback")
       .insert({ client_id: userId, exercise_id: ex.id, pain_level: painLevel, notes: feedback.trim() || null })
       .select("id").single();
-    setExercises((prev) => prev.map((e, j) => j === i ? { ...e, done: true, feedback_id: inserted?.id ?? null, submitted_pain_level: painLevel, submitted_notes: feedback.trim() } : e));
+    if (error || !inserted) {
+      showToast("Couldn't save — check your connection and try again.", "error");
+      return;
+    }
+    setExercises((prev) => prev.map((e, j) => j === i ? { ...e, done: true, feedback_id: inserted.id, submitted_pain_level: painLevel, submitted_notes: feedback.trim() } : e));
     setActiveIndex(null); setPainLevel(0); setFeedback("");
   };
 
   const unmarkDone = async (i: number) => {
     const ex = exercises[i];
     if (!ex.feedback_id) return;
-    await supabase.from("exercise_feedback").delete().eq("id", ex.feedback_id);
+    const { error } = await supabase.from("exercise_feedback").delete().eq("id", ex.feedback_id);
+    if (error) {
+      showToast("Couldn't update — check your connection and try again.", "error");
+      return;
+    }
     setExercises((prev) => prev.map((e, j) => j === i ? { ...e, done: false, feedback_id: null, submitted_pain_level: 0, submitted_notes: "" } : e));
     setActiveIndex(null);
   };
@@ -85,9 +95,14 @@ export default function Workouts() {
     const ex = exercises[i];
     if (!ex.feedback_id) return;
     setSavingEdit(true);
-    await supabase.from("exercise_feedback").update({ pain_level: editPain, notes: editNotes.trim() || null }).eq("id", ex.feedback_id);
+    const { error } = await supabase.from("exercise_feedback").update({ pain_level: editPain, notes: editNotes.trim() || null }).eq("id", ex.feedback_id);
+    setSavingEdit(false);
+    if (error) {
+      showToast("Couldn't save your changes — try again.", "error");
+      return;
+    }
     setExercises((prev) => prev.map((e, j) => j === i ? { ...e, submitted_pain_level: editPain, submitted_notes: editNotes.trim() } : e));
-    setSavingEdit(false); setActiveIndex(null);
+    setActiveIndex(null);
   };
 
   const completed = exercises.filter((e) => e.done).length;
@@ -121,6 +136,7 @@ export default function Workouts() {
 
   return (
     <div className="max-w-2xl mx-auto px-5 py-6">
+      <ToastContainer toasts={toasts} />
       <div className="mb-5">
         <p className="font-inter font-medium text-xs text-primary uppercase tracking-widest mb-1">Daily Recovery Plan</p>
         <h1 className="font-manrope font-extrabold text-3xl text-on-background">Exercise Tracker</h1>

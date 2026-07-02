@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MessageCircle, Send } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { useToast, ToastContainer } from "@/components/toast";
 
 type Profile = { id: string; full_name: string; role: string };
 type Message = { id: string; sender_id: string; receiver_id: string; content: string; created_at: string };
@@ -15,6 +16,7 @@ export default function Messages() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { toasts, showToast } = useToast();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -75,7 +77,11 @@ export default function Messages() {
     if (!message.trim() || !currentUser || !selectedContact) return;
     const content = message.trim();
     setMessage("");
-    await supabase.from("messages").insert({ sender_id: currentUser.id, receiver_id: selectedContact.id, content });
+    const { error } = await supabase.from("messages").insert({ sender_id: currentUser.id, receiver_id: selectedContact.id, content });
+    if (error) {
+      setMessage(content);
+      showToast("Message didn't send — try again.", "error");
+    }
   };
 
   const formatTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -98,6 +104,7 @@ export default function Messages() {
 
   return (
     <div className="flex h-full overflow-hidden">
+      <ToastContainer toasts={toasts} />
 
       {/* Contact sidebar — desktop */}
       <aside className="hidden md:flex flex-col w-56 border-r border-outline-variant/50 shrink-0 overflow-y-auto">

@@ -15,7 +15,6 @@ export default function Signup() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"client" | "pt">("client");
   const [consent, setConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -24,7 +23,8 @@ export default function Signup() {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!fullName || !email || !password) { setError("Please fill in all fields."); return; }
+    const name = fullName.trim();
+    if (!name || !email || !password) { setError("Please fill in all fields."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     if (!consent) { setError("Please review and accept the Privacy Notice to continue."); return; }
     setLoading(true);
@@ -33,8 +33,10 @@ export default function Signup() {
       password,
       options: {
         data: {
-          full_name: fullName,
-          role,
+          full_name: name,
+          // Everyone signs up as a patient; PT accounts are granted
+          // manually in the database (see supabase/lock-down-pt-role.sql).
+          role: "client",
           privacy_consented_at: new Date().toISOString(),
           privacy_version: PRIVACY_VERSION,
         },
@@ -88,25 +90,6 @@ export default function Signup() {
           <Image src="/logo-icon.png" alt="Thrive Hub" width={72} height={72} className="mb-4" />
           <h1 className="font-manrope font-extrabold text-3xl text-on-background">Create Account</h1>
           <p className="font-inter text-sm text-on-surface-variant mt-1">Join Thrive Hub</p>
-        </div>
-
-        {/* Role selector */}
-        <div className="mb-5">
-          <p className="font-inter font-medium text-xs text-on-surface-variant mb-2 ml-1 tracking-wider">I AM A</p>
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={() => setRole("client")}
-              className={`flex-1 py-3 rounded-full font-inter font-semibold text-sm transition-colors ${role === "client" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"}`}>
-              Patient
-            </button>
-            <button
-              type="button"
-              onClick={() => setRole("pt")}
-              className={`flex-1 py-3 rounded-full font-inter font-semibold text-sm transition-colors ${role === "pt" ? "bg-primary text-on-primary" : "bg-surface-container-low text-on-surface-variant"}`}>
-              Physical Therapist
-            </button>
-          </div>
         </div>
 
         <form onSubmit={handleSignup} className="flex flex-col gap-4">

@@ -148,7 +148,7 @@ export default function Clients() {
             <div key={client.id} className="bg-surface-container-lowest rounded-2xl p-4 flex items-center gap-3 shadow-sm group">
               <button onClick={() => router.push(`/clients/${client.id}`)} className="flex items-center gap-3 flex-1 text-left">
                 <div className="w-12 h-12 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                  <span className="font-manrope font-bold text-lg text-primary">{client.full_name[0].toUpperCase()}</span>
+                  <span className="font-manrope font-bold text-lg text-primary">{(client.full_name?.[0] ?? "?").toUpperCase()}</span>
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-inter font-semibold text-sm text-on-background">{client.full_name}</p>
@@ -206,7 +206,7 @@ export default function Clients() {
                     <button key={p.id} onClick={() => addClient(p)} disabled={adding === p.id}
                       className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors w-full text-left disabled:opacity-60">
                       <div className="w-9 h-9 rounded-full bg-primary-container flex items-center justify-center shrink-0">
-                        <span className="font-manrope font-bold text-sm text-primary">{p.full_name[0].toUpperCase()}</span>
+                        <span className="font-manrope font-bold text-sm text-primary">{(p.full_name?.[0] ?? "?").toUpperCase()}</span>
                       </div>
                       <span className="font-inter font-semibold text-sm text-on-background flex-1">{p.full_name}</span>
                       {adding === p.id
