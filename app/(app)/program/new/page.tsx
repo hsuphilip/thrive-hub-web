@@ -130,6 +130,13 @@ function NewProgramContent() {
       showToast("Template saved");
       setTimeout(() => router.push("/library"), 1000);
     } else {
+      // Email the patient that a program was assigned (fire-and-forget:
+      // a notification failure shouldn't block the assignment).
+      fetch("/api/notify-program", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ programId: program.id }),
+      }).catch(() => {});
       showToast(`Program assigned to ${clientName}`);
       setTimeout(() => router.back(), 1000);
     }
