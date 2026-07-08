@@ -35,7 +35,13 @@ export async function POST(request: Request) {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
   const resendKey = process.env.RESEND_API_KEY;
   if (!serviceKey || !resendKey) {
-    return NextResponse.json({ error: "Email not configured" }, { status: 503 });
+    // Name the missing var(s) — env names are case-sensitive in Vercel,
+    // so a near-miss like Resend_API_Key is invisible to this code.
+    const missing = [
+      !resendKey && "RESEND_API_KEY",
+      !serviceKey && "SUPABASE_SERVICE_ROLE_KEY",
+    ].filter(Boolean).join(" + ");
+    return NextResponse.json({ error: `missing env var ${missing}` }, { status: 503 });
   }
 
   // Only the PT who owns the program may trigger its notification.
