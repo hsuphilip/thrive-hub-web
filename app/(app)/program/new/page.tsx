@@ -130,15 +130,28 @@ function NewProgramContent() {
       showToast("Template saved");
       setTimeout(() => router.push("/library"), 1000);
     } else {
-      // Email the patient that a program was assigned (fire-and-forget:
-      // a notification failure shouldn't block the assignment).
-      fetch("/api/notify-program", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ programId: program.id }),
-      }).catch(() => {});
-      showToast(`Program assigned to ${clientName}`);
-      setTimeout(() => router.back(), 1000);
+      // Email the patient that a program was assigned. The assignment is
+      // already saved either way — but surface the email result so a
+      // failed notification doesn't silently look like success.
+      let note = "";
+      try {
+        const res = await fetch("/api/notify-program", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ programId: program.id }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          note = ` — email failed (${body?.error ?? `HTTP ${res.status}`})`;
+        }
+      } catch {
+        note = " — email failed (network error)";
+      }
+      showToast(
+        note ? `Program assigned to ${clientName}${note}` : `Program assigned to ${clientName} — email sent`,
+        note ? "error" : "success"
+      );
+      setTimeout(() => router.back(), note ? 2500 : 1000);
     }
   };
 
